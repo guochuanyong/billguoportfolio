@@ -17,30 +17,30 @@ export default function Projects() {
     {
       title: "Automated Report Generator For KPI Reporting",
       description:
-        "Workflow to log and organize incoming data requests from a shared inbox into a structured tracker.",
+        "Automated KPI report generation for bi-weekly KPI reports. ",
       tags: ["Excel", "Python", "VBA"],
-      link: "#",
+      link: "https://github.com/guochuanyong/KPI-Automation",
     },
     {
-      title: "SQl Training For Analysts",
+      title: "Password Strength Analysis With Excel",
       description:
-        "Workflow to log and organize incoming data requests from a shared inbox into a structured tracker.",
-      tags: ["SQL"],
-      link: "#",
+        "Data analysis and visualizations created in Excel. Used to showcase some commonly used Excel formulas and Pivot Tables for data analysis.",
+      tags: ["Excel", "Formulas", "Pivot Tables"],
+      link: "https://github.com/guochuanyong/password_strength",
     },
     {
       title: "Tableau Project",
       description:
-        "Workflow to log and organize incoming data requests from a shared inbox into a structured tracker.",
+        "Currently in progress, coming soon.",
       tags: ["Tableau"],
-      link: "#",
+      link: "Coming Soon",
     },
     {
       title: "Portfolio Website",
       description:
-        "Workflow to log and organize incoming data requests from a shared inbox into a structured tracker.",
+        "Portfolio website to showcase my data analytics projects. Website hosted on Hostinger. ",
       tags: ["Node.js", "React", "Tailwind CSS"],
-      link: "#",
+      link: "https://github.com/guochuanyong/billguoportfolio",
     },
   ];
 
