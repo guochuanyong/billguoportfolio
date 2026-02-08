@@ -3,7 +3,7 @@ export default function Projects() {
     {
       title: "Stock Market Dashboard",
       description:
-        "Interactive dashboard for tracking SP500, NASDAQ100, and Dow Jones stocks. Stocked data extracteded from Yahoo Finance and Wikipedia with Python. Dashboard built in Power BI with DAX and Power Query.",
+        "Interactive dashboard for tracking SP500, NASDAQ100, and Dow Jones stocks. Stocked data extracted from Yahoo Finance and Wikipedia with Python. Dashboard built in Power BI with DAX and Power Query.",
       tags: ["Python", "Power BI"],
       link: "https://github.com/guochuanyong/Trading-Dashboard",
     },
@@ -38,7 +38,7 @@ export default function Projects() {
     {
       title: "Portfolio Website",
       description:
-        "Portfolio website to showcase my data analytics projects. Website hosted on Hostinger. ",
+        "Portfolio website for showcasing my data analytics projects. Website hosted on Hostinger. ",
       tags: ["Node.js", "React", "Tailwind CSS"],
       link: "https://github.com/guochuanyong/billguoportfolio",
     },
