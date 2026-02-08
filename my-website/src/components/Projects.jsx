@@ -17,7 +17,7 @@ export default function Projects() {
     {
       title: "Automated Report Generator For KPI Reporting",
       description:
-        "Automated KPI report generation for bi-weekly KPI reports. ",
+        "Automated KPI report generation for bi-weekly KPI reports. Uses complex Excel formulas to calculate KPI values. Python is used for variable mapping to generate Word report with KPI values from Excel. VBA is used for selective formula removal in Excel, allowing for source data deletion.",
       tags: ["Excel", "Python", "VBA"],
       link: "https://github.com/guochuanyong/KPI-Automation",
     },
@@ -33,7 +33,7 @@ export default function Projects() {
       description:
         "Currently in progress, coming soon.",
       tags: ["Tableau"],
-      link: "Coming Soon",
+      link: "https://portfoliobillg.com",
     },
     {
       title: "Portfolio Website",
