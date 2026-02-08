@@ -17,7 +17,7 @@ export default function Projects() {
     {
       title: "Automated Report Generator For KPI Reporting",
       description:
-        "Automated KPI report generation for bi-weekly KPI reports. Uses complex Excel formulas to calculate KPI values. Python is used for variable mapping to generate Word report with KPI values from Excel. VBA is used for selective formula removal in Excel, allowing for source data deletion.",
+        "Automated report generation for KPI reports. Uses complex Excel formulas to calculate KPI values. Python is used for variable mapping to generate Word report. VBA is used for selective formula removal in Excel.",
       tags: ["Excel", "Python", "VBA"],
       link: "https://github.com/guochuanyong/KPI-Automation",
     },
