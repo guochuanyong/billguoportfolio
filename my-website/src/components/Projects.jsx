@@ -29,9 +29,9 @@ export default function Projects() {
       link: "https://github.com/guochuanyong/password_strength",
     },
     {
-      title: "Tableau Project",
+      title: "Netflix Dashboard",
       description:
-        "Currently in progress, coming soon.",
+        "Dashboard for movies and TV shows available on Netflix. Currently in progress, coming soon.",
       tags: ["Tableau"],
       link: "https://portfoliobillg.com",
     },
@@ -53,9 +53,8 @@ export default function Projects() {
       <section className="w-full max-w-6xl mx-auto px-6 pt-72 pb-24 min-h-[calc(100vh-5rem)]">
         <h2 className="text-3xl font-bold">Projects</h2>
         <p className="text-white/70 mt-2 max-w-2xl">
-          A few things I’ve built recently — dashboards, automation, and analytics tooling.
+          {/* Add subtitle here if needed */}
         </p>
-
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((p) => (
             <a
