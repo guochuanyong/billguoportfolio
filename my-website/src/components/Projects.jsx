@@ -8,6 +8,13 @@ export default function Projects() {
       link: "https://github.com/guochuanyong/Trading-Dashboard",
     },
     {
+      title: "Netflix Dashboard",
+      description:
+        "Interactive dashboard for movies and TV shows on Netflix. Allows users to search for popular titles based on countries and genres, and filter by content type.",
+      tags: ["Python", "Tableau"],
+      link: "https://public.tableau.com/app/profile/bill.guo6908/viz/NetflixDashboard_17708668260490/DashboardMain",
+    },
+    {
       title: "Custom Data Extraction and Conversion Tool",
       description:
         "Custom SQL script for enrolment data extraction and python script for data conversion into custom XML data format.",
@@ -27,13 +34,6 @@ export default function Projects() {
         "Data analysis and visualizations created in Excel. Used to showcase some commonly used Excel formulas and Pivot Tables for data analysis.",
       tags: ["Excel", "Formulas", "Pivot Tables"],
       link: "https://github.com/guochuanyong/password_strength",
-    },
-    {
-      title: "Netflix Dashboard",
-      description:
-        "Dashboard for movies and TV shows available on Netflix. Currently in progress, coming soon.",
-      tags: ["Tableau"],
-      link: "https://portfoliobillg.com",
     },
     {
       title: "Portfolio Website",
