@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -6,7 +7,7 @@ export default function Navbar() {
   return (
     <nav
       className="
-        fixed top-0 left-0 z-50 w-full
+        fixed top-0 left-0 z-[2000] w-full
         bg-emerald-950/70 backdrop-blur-sm
         text-white
         border-b border-white/10
@@ -14,17 +15,28 @@ export default function Navbar() {
     >
       <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         {/* Logo / Name */}
-        <div className="text-xl font-bold leading-tight">
+        <Link
+          to="/"
+          className="text-xl font-bold leading-tight hover:text-green-400 transition"
+          onClick={() => setOpen(false)}
+        >
           <div>Bill Guo&apos;s</div>
           <div>Portfolio</div>
-        </div>
+        </Link>
 
         {/* Desktop links */}
         <div className="hidden md:flex gap-6 text-sm">
-          <a href="#" className="hover:text-green-400 transition">
+          <a
+            href="/#about"
+            className="hover:text-green-400 transition"
+          >
             About
           </a>
-          <a href="#projects" className="hover:text-green-400 transition">
+
+          <a
+            href="/#projects"
+            className="hover:text-green-400 transition"
+          >
             Projects
           </a>
         </div>
@@ -73,14 +85,15 @@ export default function Navbar() {
         <div className="md:hidden border-t border-white/10">
           <div className="max-w-6xl mx-auto px-6 py-3 flex flex-col gap-2">
             <a
-              href="#"
+              href="/#about"
               className="py-2 rounded-lg hover:bg-white/10 hover:text-green-400 transition"
               onClick={() => setOpen(false)}
             >
               About
             </a>
+
             <a
-              href="#projects"
+              href="/#projects"
               className="py-2 rounded-lg hover:bg-white/10 hover:text-green-400 transition"
               onClick={() => setOpen(false)}
             >

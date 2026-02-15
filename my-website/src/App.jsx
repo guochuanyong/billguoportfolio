@@ -1,28 +1,39 @@
-import Navbar from "./components/Navbar";
-import Profile from "./components/Profile";
-import Projects from "./components/Projects";
-import MatrixRain from "./components/MatrixRain";
+import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import Home from "./pages/Home";
+import CalgaryMapPage from "./pages/CalgaryMapPage";
+
+function ScrollToHash() {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Only do something if there's a hash like "#projects"
+    if (!location.hash) return;
+
+    const id = location.hash.replace("#", "");
+
+    // Give the new route a moment to render (Home + Projects)
+    requestAnimationFrame(() => {
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      // scrollMarginTop on the element will be respected by scrollIntoView
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [location.pathname, location.hash]);
+
+  return null;
+}
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-black text-white relative overflow-hidden">
-      {/* Background */}
-      <MatrixRain opacity={0.3} speed={1} fontSize={20} density={1} />
+    <BrowserRouter>
+      <ScrollToHash />
 
-      {/* Foreground content */}
-      <div className="relative z-10 flex flex-col items-center pt-70">
-        <Navbar />
-
-        {/* Center profile horizontally */}
-        <div className="w-full flex justify-center">
-          <Profile />
-        </div>
-
-        {/* Projects section */}
-        <div className="mt-50 w-full">
-          <Projects />
-        </div>
-      </div>
-    </div>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/calgary-map" element={<CalgaryMapPage />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
