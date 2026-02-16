@@ -1,0 +1,7 @@
+# Parquet files
+*.parquet
+*.parquet.gzip
+*.parq
+
+# CSV files
+*.csv

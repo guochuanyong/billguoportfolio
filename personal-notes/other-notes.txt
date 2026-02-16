@@ -1,0 +1,9 @@
+-Delete data from table in My sql
+
+TRUNCATE TABLE calgary_assessments_points;
+or
+TRUNCATE TABLE calgary_assessments_points;
+
+-Importing data in phpMyAdmin, how to exclude column names (doesnt really work, idk, maybe delete header from csv?)
+
+roll_year,roll_number,address,assessed_value,assessment_class_description,comm_name,year_of_construction,property_type,land_size_sf,mod_date,cpid,unique_key,latitude,longitude

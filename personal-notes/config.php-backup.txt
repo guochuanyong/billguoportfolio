@@ -1,0 +1,10 @@
+-> public_html/config.php
+
+<?php
+// config.php
+// IMPORTANT: do NOT commit this to GitHub with real credentials
+
+$db_host = "localhost";
+$db_name = "database_name";
+$db_user = "database_username";
+$db_pass = "database_password";

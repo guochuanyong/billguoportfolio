@@ -3,6 +3,14 @@ import { Link } from "react-router-dom";
 export default function Projects() {
   const projects = [
     {
+      title: "Calgary Property Assessments Map",
+      description:
+        "Interactive map web application for all current Calgary properties assessed by the City of Calgary. Displays Calgary properties with dynamic zoom and search functionality.",
+      tags: ["Leaflet", "MySQL", "Node.js", "PHP", "Python", "React", "REST API", "Vite"],
+      link: "/calgary-map",
+      internal: true,
+    },
+    {
       title: "Stock Market Dashboard",
       description:
         "Interactive dashboard for tracking SP500, NASDAQ100, and Dow Jones stocks. Stock data extracted from Yahoo Finance and Wikipedia with Python. Dashboard built in Power BI with DAX and Power Query.",
@@ -20,7 +28,7 @@ export default function Projects() {
       title: "Custom Data Extraction and Conversion Tool",
       description:
         "Custom SQL script for enrolment data extraction and python script for data conversion into custom XML data format.",
-      tags: ["Python", "SQL", "XML"],
+      tags: ["Python", "T-SQL", "XML"],
       link: "https://github.com/guochuanyong/LERS-Enrolment-Data-Reporting",
     },
     {
@@ -41,16 +49,8 @@ export default function Projects() {
       title: "Portfolio Website",
       description:
         "Portfolio website for showcasing my data analytics projects. Website hosted on Hostinger. ",
-      tags: ["Node.js", "React", "Tailwind CSS"],
+      tags: ["Node.js", "React", "Tailwind CSS", "Vite"],
       link: "https://github.com/guochuanyong/billguoportfolio",
-    },
-    {
-      title: "Calgary Property Map (Work In Progress)",
-      description:
-        "Interactive web map built with React and Leaflet. Displays Calgary with dynamic zoom and pan functionality. Designed as a foundation for parcel-level real estate visualization using open data.",
-      tags: ["React", "Leaflet", "Mapping"],
-      link: "/calgary-map",
-      internal: true,
     },
   ];
 
