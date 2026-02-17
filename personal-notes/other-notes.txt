@@ -4,6 +4,14 @@ TRUNCATE TABLE calgary_assessments_points;
 or
 TRUNCATE TABLE calgary_assessments_points;
 
--Importing data in phpMyAdmin, how to exclude column names (doesnt really work, idk, maybe delete header from csv?)
+-Importing data in phpMyAdmin, how to exclude column names (doesnt really work, idk, maybe delete header from csv LOL?)
 
 roll_year,roll_number,address,assessed_value,assessment_class_description,comm_name,year_of_construction,property_type,land_size_sf,mod_date,cpid,unique_key,latitude,longitude
+
+-Deleting duplicate rows on roll_number column (not the best workaround, I'll have to think of something better)
+
+DELETE t1
+FROM calgary_assessments_points t1
+JOIN calgary_assessments_points t2
+  ON t1.roll_number = t2.roll_number
+ AND t1.unique_key > t2.unique_key;
