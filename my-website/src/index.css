@@ -1,1 +1,14 @@
 @import "tailwindcss";
+
+/* --- Leaflet popup: force true rectangle (remove triangle) --- */
+.leaflet-popup-tip-container {
+  display: none !important;
+}
+
+.leaflet-popup {
+  margin-bottom: 0 !important; /* remove space reserved for the tip */
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 10px; /* optional */
+}

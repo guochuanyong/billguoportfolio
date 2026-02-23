@@ -1,59 +1,14 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import L from "leaflet";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   MapContainer,
   TileLayer,
   Popup,
-  CircleMarker,
-  Tooltip,
-  useMapEvents,
   useMap,
-  Marker,
   ZoomControl,
+  GeoJSON,
+  CircleMarker,
+  useMapEvents,
 } from "react-leaflet";
-
-function BoundsFetcher({ setMode, setData, setError }) {
-  const map = useMapEvents({
-    moveend: () => fetchData(),
-    zoomend: () => fetchData(),
-  });
-
-  const fetchData = useCallback(() => {
-    const b = map.getBounds();
-    const z = map.getZoom();
-
-    const minLat = b.getSouth();
-    const maxLat = b.getNorth();
-    const minLng = b.getWest();
-    const maxLng = b.getEast();
-
-    const url =
-      `https://portfoliobillg.com/api.php` +
-      `?minLat=${minLat}&maxLat=${maxLat}&minLng=${minLng}&maxLng=${maxLng}` +
-      `&zoom=${z}` +
-      `&limit=5000`;
-
-    fetch(url)
-      .then((res) => res.json())
-      .then((json) => {
-        if (!json.ok) throw new Error(json.error || "API returned ok=false");
-        setMode(json.mode);
-        setData(json.data || []);
-        setError("");
-      })
-      .catch((err) => {
-        console.error(err);
-        setError(String(err?.message || err));
-      });
-  }, [map, setMode, setData, setError]);
-
-  useEffect(() => {
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return null;
-}
 
 /** Reliable way to capture the Leaflet map instance */
 function MapInstanceSetter({ setMap }) {
@@ -61,6 +16,20 @@ function MapInstanceSetter({ setMap }) {
   useEffect(() => {
     setMap(m);
   }, [m, setMap]);
+  return null;
+}
+
+/** Track zoom in React state so we can hide/show layers */
+function ZoomWatcher({ setZoom }) {
+  const map = useMapEvents({
+    zoomend: () => setZoom(map.getZoom()),
+  });
+
+  useEffect(() => {
+    setZoom(map.getZoom());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return null;
 }
 
@@ -117,38 +86,272 @@ function LegendBox() {
   );
 }
 
-function makeInvertedTriangleIcon({ size = 22, color = "#f97316", opacity = 0.9 }) {
-  const w = size;
-  const h = Math.round(size * 0.9);
+/**
+ * Community polygons layer
+ * - Fetches FeatureCollection from api_communities.php
+ * - ALL polygons orange (same opacity as before)
+ * - Hover popup
+ * - Popup shows old stats: avg_all, avg_res, count_all, count_res
+ * - Click zooms in (maxZoom - 1)
+ * - Hidden when zoom >= zoomThreshold (when points show)
+ *
+ * ✅ CHANGE IN THIS STEP:
+ *   - popup is offset so it doesn't sit under the cursor as much
+ *   - popup gets a custom CSS class (we'll remove the triangle tip in the NEXT step via CSS)
+ */
+function CommunitiesLayer({ setError, zoom, zoomThreshold = 14 }) {
+  const map = useMap();
 
-  const svg = `
-    <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-      <polygon
-        points="${w / 2},${h} 0,0 ${w},0"
-        fill="${color}"
-        fill-opacity="${opacity}"
-        stroke="rgba(255,255,255,0.85)"
-        stroke-width="2"
-      />
-    </svg>
-  `;
+  const [fc, setFc] = useState(null);
+  const abortRef = useRef(null);
 
-  return L.divIcon({
-    className: "",
-    html: svg,
-    iconSize: [w, h],
-    iconAnchor: [w / 2, h], // tip sits on lat/lng
-    popupAnchor: [0, -h],
-    tooltipAnchor: [0, -h],
-  });
+  useEffect(() => {
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setError("");
+
+    fetch("https://portfoliobillg.com/api_communities.php", {
+      signal: controller.signal,
+    })
+      .then((r) => r.json())
+      .then((j) => {
+        if (!j?.ok || j?.type !== "FeatureCollection") {
+          throw new Error("Communities API returned unexpected response");
+        }
+        setFc(j);
+      })
+      .catch((e) => {
+        if (e?.name === "AbortError") return;
+        console.error(e);
+        setError(String(e?.message || e));
+      });
+
+    return () => controller.abort();
+  }, [setError]);
+
+  const style = useCallback(() => {
+    return {
+      weight: 1,
+      opacity: 1,
+      color: "rgba(255,255,255,0.35)",
+      fillColor: "#f97316", // orange
+      fillOpacity: 0.45,
+    };
+  }, []);
+
+  const onEachFeature = useCallback(
+    (feature, layer) => {
+      const p = feature.properties || {};
+
+      const nAll = Number(p.count_all ?? 0);
+      const nRes = Number(p.count_res ?? 0);
+
+      const avgAll =
+        p.avg_all != null && Number.isFinite(Number(p.avg_all))
+          ? Math.round(Number(p.avg_all)).toLocaleString()
+          : "-";
+      const avgRes =
+        p.avg_res != null && Number.isFinite(Number(p.avg_res))
+          ? Math.round(Number(p.avg_res)).toLocaleString()
+          : "-";
+
+      // Prevent overflow
+      const html = `
+        <div style="
+          width: 340px;
+          max-width: 340px;
+          white-space: normal;
+          overflow-wrap: anywhere;
+          word-break: break-word;
+          line-height: 1.25;
+        ">
+          <div style="font-weight: 800; margin-bottom: 6px;">
+            ${p.NAME ?? "Community"}
+          </div>
+
+          <div style="margin-top: 6px;">
+            Average Assessment (All Properties): <b>$${avgAll} CAD</b>
+          </div>
+
+          <div style="margin-top: 6px;">
+            Average Assessment (Residential): <b>$${avgRes} CAD</b>
+          </div>
+
+          <div style="margin-top: 6px; font-size: 12px; opacity: 0.85;">
+            ${nAll.toLocaleString()} Properties (${nRes.toLocaleString()} Residential)
+          </div>
+
+          <div style="margin-top: 8px; font-size: 12px; opacity: 0.8;">
+            Click area to zoom in.
+          </div>
+        </div>
+      `;
+
+      // ✅ NEW: offset popup away from cursor + add className for styling
+      layer.bindPopup(html, {
+        closeButton: false,
+        maxWidth: 360,
+        minWidth: 340,
+        autoPan: true,
+        keepInView: true,
+        offset: [0, 280], // ✅ (x,y) pixels: right + slightly up
+        className: "no-popup-tip", // ✅ next step: CSS to remove triangle
+      });
+
+      // Keep your existing hover behavior (popup on hover)
+      layer.on("mouseover", function () {
+        this.setStyle({ weight: 3, fillOpacity: 0.65, color: "rgba(255,255,255,0.75)" });
+        this.openPopup();
+      });
+
+      layer.on("mouseout", function () {
+        this.setStyle({ weight: 1, fillOpacity: 0.45, color: "rgba(255,255,255,0.35)" });
+        this.closePopup();
+      });
+
+      layer.on("click", function (e) {
+        const targetZoom = map.getMaxZoom() - 1;
+        map.flyTo(e.latlng, targetZoom, { animate: true, duration: 0.8 });
+        this.openPopup();
+      });
+    },
+    [map]
+  );
+
+  const shouldShow = zoom < zoomThreshold;
+  if (!shouldShow) return null;
+  if (!fc?.features?.length) return null;
+
+  return <GeoJSON data={fc} style={style} onEachFeature={onEachFeature} />;
+}
+
+/**
+ * Individual properties layer (points)
+ * - Uses your existing api.php bounds endpoint
+ * - Only fetches/renders when zoom >= zoomThreshold
+ * - Updates on move/zoom end
+ */
+function PointsLayer({ zoom, zoomThreshold = 14, selectedKey, setSelectedKey }) {
+  const map = useMap();
+  const [points, setPoints] = useState([]);
+
+  const fetchPoints = useCallback(() => {
+    const z = map.getZoom();
+
+    if (z < zoomThreshold) {
+      setPoints([]);
+      return;
+    }
+
+    const b = map.getBounds();
+    const minLat = b.getSouth();
+    const maxLat = b.getNorth();
+    const minLng = b.getWest();
+    const maxLng = b.getEast();
+
+    const url =
+      `https://portfoliobillg.com/api.php` +
+      `?minLat=${minLat}&maxLat=${maxLat}&minLng=${minLng}&maxLng=${maxLng}` +
+      `&zoom=${z}` +
+      `&limit=5000`;
+
+    fetch(url)
+      .then((r) => r.json())
+      .then((j) => {
+        if (!j.ok) throw new Error(j.error || "api.php ok=false");
+        setPoints(j.mode === "points" ? (j.data || []) : []);
+      })
+      .catch((e) => console.error(e));
+  }, [map, zoomThreshold]);
+
+  useEffect(() => {
+    const handler = () => fetchPoints();
+    map.on("moveend", handler);
+    map.on("zoomend", handler);
+
+    fetchPoints();
+
+    return () => {
+      map.off("moveend", handler);
+      map.off("zoomend", handler);
+    };
+  }, [map, fetchPoints]);
+
+  if (zoom < zoomThreshold) return null;
+
+  return (
+    <>
+      {points.map((p) => {
+        const lat = Number(p.latitude);
+        const lng = Number(p.longitude);
+
+        let color = "#9ca3af";
+        if (p.assessment_class_description === "Residential") color = "#2563eb";
+        else if (p.assessment_class_description === "Non-Residential") color = "#facc15";
+        else if (p.assessment_class_description === "Farm Land") color = "#16a34a";
+
+        return (
+          <CircleMarker
+            key={p.unique_key}
+            center={[lat, lng]}
+            radius={6}
+            pathOptions={{ color, fillColor: color, fillOpacity: 0.9, weight: 1 }}
+            ref={(layer) => {
+              if (layer && selectedKey && p.unique_key === selectedKey) {
+                setTimeout(() => layer.openPopup(), 50);
+                setSelectedKey(null);
+              }
+            }}
+          >
+            <Popup>
+              <div style={{ minWidth: 240 }}>
+                <div style={{ fontWeight: 700 }}>{p.address}</div>
+                <div style={{ opacity: 0.85 }}>{p.comm_name}</div>
+
+                <div style={{ marginTop: 6 }}>
+                  <b>${Number(p.assessed_value).toLocaleString()} CAD</b>
+                </div>
+
+                <div style={{ marginTop: 6, fontSize: 12, opacity: 0.85 }}>
+                  {(() => {
+                    let propertyLabel = "-";
+                    if (p.property_type === "LO") propertyLabel = "Land Only";
+                    else if (p.property_type === "LI") propertyLabel = "Land & Building (Improvement)";
+                    else if (p.property_type === "IO") propertyLabel = "Building (Improvement) Only";
+                    return propertyLabel;
+                  })()}{" "}
+                  • Built{" "}
+                  {p.year_of_construction && p.year_of_construction !== 0
+                    ? p.year_of_construction
+                    : "-"}
+                </div>
+
+                <div style={{ marginTop: 6, fontSize: 12, opacity: 0.75 }}>
+                  Class: {p.assessment_class_description ?? "-"}
+                </div>
+
+                <div style={{ marginTop: 4, fontSize: 12, opacity: 0.75 }}>
+                  Lot Size:{" "}
+                  {p.land_size_sf && Number(p.land_size_sf) > 0
+                    ? `${Number(p.land_size_sf).toLocaleString()} sq ft`
+                    : "-"}
+                </div>
+              </div>
+            </Popup>
+          </CircleMarker>
+        );
+      })}
+    </>
+  );
 }
 
 export default function CalgaryMap() {
   const calgaryCenter = [51.0447, -114.0719];
 
-  const [mode, setMode] = useState("clusters"); // "clusters" | "points"
-  const [data, setData] = useState([]);
   const [error, setError] = useState("");
+  const [zoom, setZoom] = useState(11);
 
   // Search UI state
   const [map, setMap] = useState(null);
@@ -159,7 +362,6 @@ export default function CalgaryMap() {
   const debounceRef = useRef(null);
   const abortRef = useRef(null);
 
-  // which property should auto-open its popup (after search select)
   const [selectedKey, setSelectedKey] = useState(null);
 
   const runSearch = useCallback((q) => {
@@ -177,9 +379,7 @@ export default function CalgaryMap() {
     setIsSearching(true);
     setSearchError("");
 
-    const url = `https://portfoliobillg.com/api.php?search=${encodeURIComponent(
-      trimmed
-    )}&limit=10`;
+    const url = `https://portfoliobillg.com/api.php?search=${encodeURIComponent(trimmed)}&limit=10`;
 
     fetch(url, { signal: controller.signal })
       .then((res) => res.json())
@@ -210,7 +410,6 @@ export default function CalgaryMap() {
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
       const targetZoom = 17;
-
       setSelectedKey(r.unique_key);
       map.flyTo([lat, lng], targetZoom, { animate: true, duration: 0.9 });
 
@@ -219,22 +418,6 @@ export default function CalgaryMap() {
       setSearchError("");
     },
     [map]
-  );
-
-  // ✅ ONE PLACE to control cluster triangle style
-  const CLUSTER_TRIANGLE = useMemo(
-    () => ({
-      size: 22, // px
-      color: "#f97316", // orange
-      opacity: 0.9, // 0..1
-    }),
-    []
-  );
-
-  // icon instance (stable)
-  const clusterIcon = useMemo(
-    () => makeInvertedTriangleIcon(CLUSTER_TRIANGLE),
-    [CLUSTER_TRIANGLE]
   );
 
   return (
@@ -290,15 +473,11 @@ export default function CalgaryMap() {
             }}
           >
             {isSearching && (
-              <div style={{ padding: 10, fontSize: 13, opacity: 0.9 }}>
-                Searching...
-              </div>
+              <div style={{ padding: 10, fontSize: 13, opacity: 0.9 }}>Searching...</div>
             )}
 
             {searchError && (
-              <div style={{ padding: 10, fontSize: 13, color: "#fca5a5" }}>
-                {searchError}
-              </div>
+              <div style={{ padding: 10, fontSize: 13, color: "#fca5a5" }}>{searchError}</div>
             )}
 
             {!isSearching &&
@@ -332,9 +511,7 @@ export default function CalgaryMap() {
               !searchError &&
               results.length === 0 &&
               query.trim().length >= 3 && (
-                <div style={{ padding: 10, fontSize: 13, opacity: 0.85 }}>
-                  No matches.
-                </div>
+                <div style={{ padding: 10, fontSize: 13, opacity: 0.85 }}>No matches.</div>
               )}
           </div>
         )}
@@ -352,142 +529,18 @@ export default function CalgaryMap() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <ZoomControl position="bottomleft" />
-        
+
         <MapInstanceSetter setMap={setMap} />
-        <BoundsFetcher setMode={setMode} setData={setData} setError={setError} />
+        <ZoomWatcher setZoom={setZoom} />
 
-        {/* COMMUNITY CLUSTERS (zoomed out) - inverted triangles */}
-        {mode === "clusters" &&
-          data.map((c, idx) => {
-            const nAll = Number(c.count_all || 0);
-            const nRes = Number(c.count_res || 0);
+        <CommunitiesLayer setError={setError} zoom={zoom} zoomThreshold={14} />
 
-            const avgAll = c.avg_all != null ? Number(c.avg_all).toLocaleString() : "N/A";
-            const avgRes = c.avg_res != null ? Number(c.avg_res).toLocaleString() : "N/A";
-
-            const lat = Number(c.latitude);
-            const lng = Number(c.longitude);
-
-            return (
-              <Marker
-                key={`${c.comm_name ?? "community"}-${idx}`}
-                position={[lat, lng]}
-                icon={clusterIcon}
-                zIndexOffset={1000}
-                eventHandlers={{
-                  click: (e) => {
-                    const m = e.target._map;
-                    if (!m) return;
-                    const targetZoom = m.getMaxZoom() - 1;
-                    m.flyTo(e.latlng, targetZoom, { animate: true, duration: 0.8 });
-                  },
-                }}
-              >
-                <Tooltip direction="top" sticky opacity={0.95}>
-                  <div style={{ minWidth: 360 }}>
-                    <div style={{ fontWeight: 800 }}>{c.comm_name ?? "Community"}</div>
-
-                    <div style={{ marginTop: 6 }}>
-                      Average Property Assessment (All Properties): <b>${avgAll} CAD</b>
-                    </div>
-
-                    <div style={{ marginTop: 6 }}>
-                      Average Property Assessment (Residential): <b>${avgRes} CAD</b>
-                    </div>
-
-                    <div style={{ marginTop: 6, fontSize: 12, opacity: 0.85 }}>
-                      {nAll.toLocaleString()} Properties ({nRes.toLocaleString()} Residential)
-                    </div>
-                  </div>
-                </Tooltip>
-
-                <Popup>
-                  <div style={{ minWidth: 380 }}>
-                    <div style={{ fontWeight: 800 }}>{c.comm_name ?? "Community"}</div>
-
-                    <div style={{ marginTop: 8 }}>
-                      Average Property Assessment (All Properties): <b>${avgAll} CAD</b>
-                    </div>
-
-                    <div style={{ marginTop: 8 }}>
-                      Average Property Assessment (Residential): <b>${avgRes} CAD</b>
-                    </div>
-
-                    <div style={{ marginTop: 8, fontSize: 12, opacity: 0.85 }}>
-                      {nAll.toLocaleString()} Properties ({nRes.toLocaleString()} Residential)
-                    </div>
-
-                    <div style={{ marginTop: 8, fontSize: 12, opacity: 0.8 }}>
-                      Click marker to zoom in.
-                    </div>
-                  </div>
-                </Popup>
-              </Marker>
-            );
-          })}
-
-        {/* INDIVIDUAL PROPERTIES (zoomed in) - colored circles */}
-        {mode === "points" &&
-          data.map((p) => {
-            const lat = Number(p.latitude);
-            const lng = Number(p.longitude);
-
-            let color = "#9ca3af"; // grey (default)
-            if (p.assessment_class_description === "Residential") color = "#2563eb";
-            else if (p.assessment_class_description === "Non-Residential") color = "#facc15";
-            else if (p.assessment_class_description === "Farm Land") color = "#16a34a";
-
-            return (
-              <CircleMarker
-                key={p.unique_key}
-                center={[lat, lng]}
-                radius={6}
-                pathOptions={{ color, fillColor: color, fillOpacity: 0.9, weight: 1 }}
-                ref={(layer) => {
-                  if (layer && selectedKey && p.unique_key === selectedKey) {
-                    setTimeout(() => layer.openPopup(), 50);
-                    setSelectedKey(null);
-                  }
-                }}
-              >
-                <Popup>
-                  <div style={{ minWidth: 240 }}>
-                    <div style={{ fontWeight: 700 }}>{p.address}</div>
-                    <div style={{ opacity: 0.85 }}>{p.comm_name}</div>
-
-                    <div style={{ marginTop: 6 }}>
-                      <b>${Number(p.assessed_value).toLocaleString()} CAD</b>
-                    </div>
-
-                    <div style={{ marginTop: 6, fontSize: 12, opacity: 0.85 }}>
-                      {(() => {
-                        let propertyLabel = "-";
-                        if (p.property_type === "LO") propertyLabel = "Land Only";
-                        else if (p.property_type === "LI") propertyLabel = "Land & Building (Improvement)";
-                        else if (p.property_type === "IO") propertyLabel = "Building (Improvement) Only";
-                        return propertyLabel;
-                      })()}{" "}
-                      • Built{" "}
-                      {p.year_of_construction && p.year_of_construction !== 0
-                        ? p.year_of_construction
-                        : "-"}
-                    </div>
-
-                    <div style={{ marginTop: 6, fontSize: 12, opacity: 0.75 }}>
-                      Class: {p.assessment_class_description ?? "-"}
-                    </div>
-
-                    <div style={{ marginTop: 4, fontSize: 12, opacity: 0.75 }}>
-                      Lot Size:{" "}
-                      {p.land_size_sf && Number(p.land_size_sf) > 0
-                        ? `${Number(p.land_size_sf).toLocaleString()} sq ft`
-                        : "-"}
-                    </div>
-                  </div>
-                </Popup>
-              </CircleMarker>
-            );
-          })}
+        <PointsLayer
+          zoom={zoom}
+          zoomThreshold={14}
+          selectedKey={selectedKey}
+          setSelectedKey={setSelectedKey}
+        />
       </MapContainer>
 
       <LegendBox />

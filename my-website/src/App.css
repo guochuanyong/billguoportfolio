@@ -40,3 +40,18 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Remove popup triangle completely */
+.leaflet-popup-tip-container {
+  display: none !important;
+}
+
+/* Remove space reserved for the tip */
+.leaflet-popup {
+  margin-bottom: 0 !important;
+}
+
+/* Make popup a clean rectangle */
+.leaflet-popup-content-wrapper {
+  border-radius: 10px;
+}
