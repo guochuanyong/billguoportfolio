@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
 import CalgaryMapPage from "./pages/CalgaryMapPage";
+import CalgaryMapPageTest from "./pages/CalgaryMapPageTest";
 
 function ScrollToHash() {
   const location = useLocation();
@@ -33,6 +34,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/calgary-map" element={<CalgaryMapPage />} />
+        <Route path="/calgary-map-test" element={<CalgaryMapPageTest />} />
       </Routes>
     </BrowserRouter>
   );

@@ -1,5 +1,3 @@
--> public_html/api.php
-
 <?php
 declare(strict_types=1);
 
