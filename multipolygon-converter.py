@@ -3,7 +3,7 @@ import pandas as pd
 from shapely import wkt
 from shapely.geometry import mapping
 
-INPUT_CSV = "communities.csv"
+INPUT_CSV = "Community_District_Boundaries_20260223.csv"
 OUTPUT_CSV = "communities_with_geojson.csv"
 ERROR_CSV = "communities_bad_wkt.csv"
 
