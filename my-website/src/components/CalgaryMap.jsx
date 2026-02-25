@@ -88,18 +88,13 @@ function LegendBox() {
 
 /**
  * Community polygons layer
- * - Fetches FeatureCollection from api_communities.php
- * - ALL polygons orange (same opacity as before)
- * - Hover popup
- * - Popup shows old stats: avg_all, avg_res, count_all, count_res
- * - Click zooms in (maxZoom - 1)
- * - Hidden when zoom >= zoomThreshold (when points show)
- *
- * ✅ CHANGE IN THIS STEP:
- *   - popup is offset so it doesn't sit under the cursor as much
- *   - popup gets a custom CSS class (we'll remove the triangle tip in the NEXT step via CSS)
  */
-function CommunitiesLayer({ setError, zoom, zoomThreshold = 14 }) {
+function CommunitiesLayer({
+  setError,
+  zoom,
+  zoomThreshold = 14,
+  communityPopupOffset = [0, 260], // ✅ customizable
+}) {
   const map = useMap();
 
   const [fc, setFc] = useState(null);
@@ -136,7 +131,7 @@ function CommunitiesLayer({ setError, zoom, zoomThreshold = 14 }) {
       weight: 1,
       opacity: 1,
       color: "rgba(255,255,255,0.35)",
-      fillColor: "#f97316", // orange
+      fillColor: "#f97316",
       fillOpacity: 0.45,
     };
   }, []);
@@ -157,7 +152,6 @@ function CommunitiesLayer({ setError, zoom, zoomThreshold = 14 }) {
           ? Math.round(Number(p.avg_res)).toLocaleString()
           : "-";
 
-      // Prevent overflow
       const html = `
         <div style="
           width: 340px;
@@ -189,25 +183,31 @@ function CommunitiesLayer({ setError, zoom, zoomThreshold = 14 }) {
         </div>
       `;
 
-      // ✅ NEW: offset popup away from cursor + add className for styling
       layer.bindPopup(html, {
         closeButton: false,
         maxWidth: 360,
         minWidth: 340,
         autoPan: true,
         keepInView: true,
-        offset: [0, 280], // ✅ (x,y) pixels: right + slightly up
-        className: "no-popup-tip", // ✅ next step: CSS to remove triangle
+        offset: communityPopupOffset,
+        className: "no-popup-tip",
       });
 
-      // Keep your existing hover behavior (popup on hover)
       layer.on("mouseover", function () {
-        this.setStyle({ weight: 3, fillOpacity: 0.65, color: "rgba(255,255,255,0.75)" });
+        this.setStyle({
+          weight: 3,
+          fillOpacity: 0.65,
+          color: "rgba(255,255,255,0.75)",
+        });
         this.openPopup();
       });
 
       layer.on("mouseout", function () {
-        this.setStyle({ weight: 1, fillOpacity: 0.45, color: "rgba(255,255,255,0.35)" });
+        this.setStyle({
+          weight: 1,
+          fillOpacity: 0.45,
+          color: "rgba(255,255,255,0.35)",
+        });
         this.closePopup();
       });
 
@@ -217,7 +217,7 @@ function CommunitiesLayer({ setError, zoom, zoomThreshold = 14 }) {
         this.openPopup();
       });
     },
-    [map]
+    [map, communityPopupOffset]
   );
 
   const shouldShow = zoom < zoomThreshold;
@@ -229,19 +229,31 @@ function CommunitiesLayer({ setError, zoom, zoomThreshold = 14 }) {
 
 /**
  * Individual properties layer (points)
- * - Uses your existing api.php bounds endpoint
- * - Only fetches/renders when zoom >= zoomThreshold
- * - Updates on move/zoom end
+ *
+ * ✅ NEW APPROACH (reliable):
+ * - Track which popup is currently open via Leaflet events (popupopen/popupclose)
+ * - If a point's popup is open, give that CircleMarker a red border
+ * - When the popup closes, remove the red border
  */
-function PointsLayer({ zoom, zoomThreshold = 14, selectedKey, setSelectedKey }) {
+function PointsLayer({
+  zoom,
+  zoomThreshold = 14,
+  selectedKey,
+  setSelectedKey,
+  propertyPopupOffset = [0, -12],
+}) {
   const map = useMap();
   const [points, setPoints] = useState([]);
+
+  // ✅ This is what drives the red border now
+  const [openPopupKey, setOpenPopupKey] = useState(null);
 
   const fetchPoints = useCallback(() => {
     const z = map.getZoom();
 
     if (z < zoomThreshold) {
       setPoints([]);
+      setOpenPopupKey(null);
       return;
     }
 
@@ -261,7 +273,7 @@ function PointsLayer({ zoom, zoomThreshold = 14, selectedKey, setSelectedKey }) 
       .then((r) => r.json())
       .then((j) => {
         if (!j.ok) throw new Error(j.error || "api.php ok=false");
-        setPoints(j.mode === "points" ? (j.data || []) : []);
+        setPoints(j.mode === "points" ? j.data || [] : []);
       })
       .catch((e) => console.error(e));
   }, [map, zoomThreshold]);
@@ -287,25 +299,45 @@ function PointsLayer({ zoom, zoomThreshold = 14, selectedKey, setSelectedKey }) 
         const lat = Number(p.latitude);
         const lng = Number(p.longitude);
 
-        let color = "#9ca3af";
-        if (p.assessment_class_description === "Residential") color = "#2563eb";
-        else if (p.assessment_class_description === "Non-Residential") color = "#facc15";
-        else if (p.assessment_class_description === "Farm Land") color = "#16a34a";
+        let baseColor = "#9ca3af";
+        if (p.assessment_class_description === "Residential") baseColor = "#2563eb";
+        else if (p.assessment_class_description === "Non-Residential") baseColor = "#facc15";
+        else if (p.assessment_class_description === "Farm Land") baseColor = "#16a34a";
+
+        const isOpen = p.unique_key === openPopupKey;
 
         return (
           <CircleMarker
             key={p.unique_key}
             center={[lat, lng]}
-            radius={6}
-            pathOptions={{ color, fillColor: color, fillOpacity: 0.9, weight: 1 }}
+            radius={isOpen ? 8 : 6}
+            pathOptions={{
+              // 🔴 Red border only while popup is open
+              color: isOpen ? "#ef4444" : baseColor,
+              fillColor: baseColor,
+              fillOpacity: 0.9,
+              weight: isOpen ? 3 : 1.5,
+            }}
+            eventHandlers={{
+              // This guarantees we highlight even if user clicks marker (Leaflet will open popup)
+              click: () => setOpenPopupKey(p.unique_key),
+
+              // These keep it 100% in-sync with popup visibility
+              popupopen: () => setOpenPopupKey(p.unique_key),
+              popupclose: () => {
+                setOpenPopupKey((cur) => (cur === p.unique_key ? null : cur));
+              },
+            }}
             ref={(layer) => {
+              // Programmatic open (from search selection)
               if (layer && selectedKey && p.unique_key === selectedKey) {
+                setOpenPopupKey(p.unique_key);
                 setTimeout(() => layer.openPopup(), 50);
                 setSelectedKey(null);
               }
             }}
           >
-            <Popup>
+            <Popup offset={propertyPopupOffset} className="no-popup-tip">
               <div style={{ minWidth: 240 }}>
                 <div style={{ fontWeight: 700 }}>{p.address}</div>
                 <div style={{ opacity: 0.85 }}>{p.comm_name}</div>
@@ -318,8 +350,10 @@ function PointsLayer({ zoom, zoomThreshold = 14, selectedKey, setSelectedKey }) 
                   {(() => {
                     let propertyLabel = "-";
                     if (p.property_type === "LO") propertyLabel = "Land Only";
-                    else if (p.property_type === "LI") propertyLabel = "Land & Building (Improvement)";
-                    else if (p.property_type === "IO") propertyLabel = "Building (Improvement) Only";
+                    else if (p.property_type === "LI")
+                      propertyLabel = "Land & Building (Improvement)";
+                    else if (p.property_type === "IO")
+                      propertyLabel = "Building (Improvement) Only";
                     return propertyLabel;
                   })()}{" "}
                   • Built{" "}
@@ -379,7 +413,9 @@ export default function CalgaryMap() {
     setIsSearching(true);
     setSearchError("");
 
-    const url = `https://portfoliobillg.com/api.php?search=${encodeURIComponent(trimmed)}&limit=10`;
+    const url = `https://portfoliobillg.com/api.php?search=${encodeURIComponent(
+      trimmed
+    )}&limit=10`;
 
     fetch(url, { signal: controller.signal })
       .then((res) => res.json())
@@ -419,6 +455,10 @@ export default function CalgaryMap() {
     },
     [map]
   );
+
+  // Customize offsets here
+  const communityPopupOffset = [0, 260];
+  const propertyPopupOffset = [0, 175];
 
   return (
     <div
@@ -507,12 +547,9 @@ export default function CalgaryMap() {
                 </button>
               ))}
 
-            {!isSearching &&
-              !searchError &&
-              results.length === 0 &&
-              query.trim().length >= 3 && (
-                <div style={{ padding: 10, fontSize: 13, opacity: 0.85 }}>No matches.</div>
-              )}
+            {!isSearching && !searchError && results.length === 0 && query.trim().length >= 3 && (
+              <div style={{ padding: 10, fontSize: 13, opacity: 0.85 }}>No matches.</div>
+            )}
           </div>
         )}
       </div>
@@ -533,13 +570,19 @@ export default function CalgaryMap() {
         <MapInstanceSetter setMap={setMap} />
         <ZoomWatcher setZoom={setZoom} />
 
-        <CommunitiesLayer setError={setError} zoom={zoom} zoomThreshold={14} />
+        <CommunitiesLayer
+          setError={setError}
+          zoom={zoom}
+          zoomThreshold={17}
+          communityPopupOffset={communityPopupOffset}
+        />
 
         <PointsLayer
           zoom={zoom}
-          zoomThreshold={14}
+          zoomThreshold={17}
           selectedKey={selectedKey}
           setSelectedKey={setSelectedKey}
+          propertyPopupOffset={propertyPopupOffset}
         />
       </MapContainer>
 
