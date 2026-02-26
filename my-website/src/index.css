@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Keep layout width consistent between pages that do/don't have a scrollbar */
+html {
+  scrollbar-gutter: stable;
+}
+
 /* --- Leaflet popup: force true rectangle (remove triangle) --- */
 .leaflet-popup-tip-container {
   display: none !important;

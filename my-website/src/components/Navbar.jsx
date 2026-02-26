@@ -39,6 +39,13 @@ export default function Navbar() {
           >
             Projects
           </a>
+
+          <a
+            href="/#contact"
+            className="hover:text-green-400 transition"
+          >
+            Contact
+          </a>
         </div>
 
         {/* Mobile menu button */}
@@ -98,6 +105,14 @@ export default function Navbar() {
               onClick={() => setOpen(false)}
             >
               Projects
+            </a>
+
+            <a
+              href="/#contact"
+              className="py-2 rounded-lg hover:bg-white/10 hover:text-green-400 transition"
+              onClick={() => setOpen(false)}
+            >
+              Contact
             </a>
           </div>
         </div>
